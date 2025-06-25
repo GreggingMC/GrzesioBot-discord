@@ -28,9 +28,19 @@ jobs:
     - name: Test
       run: dotnet test -c Release --no-build --verbosity normal
 
+    - name: Publish
+      run: dotnet publish -c Release --no-build --self-contained -p:PublishSingleFile=true -r linux-x64
+
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: Build Artifacts
         path: |
-          GrzesioBot/bin/Release
+          GrzesioBot/bin/Release/net9.0
+
+    - name: Upload Publish Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Publish Artifacts
+        path: |
+           GrzesioBot/bin/Release/net9.0/linux-x64/publish
