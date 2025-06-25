@@ -30,7 +30,11 @@ builder.Services
     .AddHttpClient()
     .AddDiscordGateway(options =>
     {
-        options.Intents = GatewayIntents.Guilds | GatewayIntents.GuildUsers | GatewayIntents.GuildMessages | GatewayIntents.MessageContent;
+        options.Intents = GatewayIntents.Guilds
+                          | GatewayIntents.GuildUsers
+                          | GatewayIntents.GuildPresences
+                          | GatewayIntents.GuildMessages
+                          | GatewayIntents.MessageContent;
     })
     .AddApplicationCommands(o =>
     {
