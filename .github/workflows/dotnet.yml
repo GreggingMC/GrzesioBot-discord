@@ -29,7 +29,7 @@ jobs:
       run: dotnet test -c Release --no-build --verbosity normal
 
     - name: Publish
-      run: dotnet publish -c Release --no-build --self-contained -p:PublishSingleFile=true -r linux-x64
+      run: dotnet publish -c Release --self-contained -p:PublishSingleFile=true -r linux-x64
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
