@@ -32,6 +32,8 @@ public class Config
 
         public string AuthorizationFailureMessage { get; set; } = "An error occurred while trying to authorize your account. Please try again later.";
 
+        public string AuthorizationFailureInvalidCodeMessage { get; set; } = "The code you entered is invalid. Please try again.";
+
         public string AuthorizationSuccessMessage { get; set; } = "Your account has been successfully authorized.";
     }
 

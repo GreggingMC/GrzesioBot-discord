@@ -1,3 +1,5 @@
+using System.Net;
+
 using GrzesioBot;
 
 using Microsoft.EntityFrameworkCore;
@@ -180,6 +182,12 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
 
     if (!responseMessage.IsSuccessStatusCode)
     {
+        if (responseMessage.StatusCode is HttpStatusCode.Unauthorized)
+        {
+            await modalInteraction.SendFollowupMessageAsync(authConfig.AuthorizationFailureInvalidCodeMessage);
+            return;
+        }
+
         logger.LogError("Authorization request failed with status code {}", responseMessage.StatusCode);
 
         await modalInteraction.SendFollowupMessageAsync(authConfig.AuthorizationFailureMessage);
