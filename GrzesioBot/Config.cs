@@ -4,7 +4,7 @@ public class Config
 {
     public AuthorizeConfig Authorize { get; set; } = new();
 
-    public ConnectionConfig Connection { get; set; } = new();
+    public required ConnectionConfig Connection { get; set; }
 
     public StorageConfig Storage { get; set; } = new();
 
@@ -40,6 +40,8 @@ public class Config
     public class ConnectionConfig
     {
         public string BaseUrl { get; set; } = "http://localhost:8080";
+
+        public required string Secret { get; set; }
     }
 
     public class StorageConfig

@@ -4,6 +4,7 @@ using GrzesioBot;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 using NetCord;
 using NetCord.Gateway;
@@ -16,7 +17,25 @@ using NetCord.Services.ComponentInteractions;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-builder.Services
+var services = builder.Services;
+
+services
+    .AddOptions<Config>()
+    .BindConfiguration("Config");
+
+const string ModHttpClientName = "mod";
+
+services
+    .AddHttpClient(ModHttpClientName, (services, httpClient) =>
+    {
+        var options = services.GetRequiredService<IOptions<Config>>();
+        var connectionConfig = options.Value.Connection;
+
+        httpClient.BaseAddress = new(connectionConfig.BaseUrl);
+        httpClient.DefaultRequestHeaders.Add("Authorization", connectionConfig.Secret);
+    });
+
+services
     .AddSingleton<IWebhookProvider, WebhookProvider>()
     .AddSingleton<IMinecraftAvatarUrlProvider, CraftheadAvatarUrlProvider>()
     .AddDbContext<StorageContext>((services, builder) =>
@@ -27,7 +46,6 @@ builder.Services
 
         builder.UseSqlite($"Data Source={fullPath}");
     })
-    .AddHttpClient()
     .AddDiscordGateway(options =>
     {
         options.Intents = GatewayIntents.Guilds
@@ -51,8 +69,6 @@ builder.Services
         if (message.ChannelId != guildConfig.ServerChannelId)
             return;
 
-        var connectionConfig = config.Value.Connection;
-
         await using var scope = services.CreateAsyncScope();
 
         var storageContext = scope.ServiceProvider.GetRequiredService<StorageContext>();
@@ -73,12 +89,12 @@ builder.Services
             Attachments = message.Attachments.Select(a => new MessageSendPayload.AttachmentInfo(a.FileName, a.ProxyUrl)),
         };
 
-        using var httpClient = httpClientFactory.CreateClient();
+        using var httpClient = httpClientFactory.CreateClient(ModHttpClientName);
 
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.PostAsJsonAsync($"{connectionConfig.BaseUrl}/message", payload);
+            response = await httpClient.PostAsJsonAsync("/message", payload);
         }
         catch (Exception ex)
         {
@@ -88,9 +104,7 @@ builder.Services
 
         if (!response.IsSuccessStatusCode)
             logger.LogError("The server responded with an error: {}", response.StatusCode);
-    })
-    .AddOptions<Config>()
-    .BindConfiguration("Config");
+    });
 
 var app = builder.Build();
 
@@ -151,8 +165,6 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
                                                        RestClient client,
                                                        ComponentInteractionContext context) =>
 {
-    var connectionConfig = options.Value.Connection;
-
     var authConfig = options.Value.Authorize;
 
     var guildConfig = options.Value.Guild;
@@ -161,7 +173,7 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
 
     var codeInput = (TextInput)modalInteraction.Data.Components[0];
 
-    using var httpClient = httpClientFactory.CreateClient();
+    using var httpClient = httpClientFactory.CreateClient(ModHttpClientName);
 
     AuthorizeSendPayload payload = new()
     {
@@ -174,7 +186,7 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
     HttpResponseMessage responseMessage;
     try
     {
-        responseMessage = await httpClient.PostAsJsonAsync($"{connectionConfig.BaseUrl}/authorize", payload);
+        responseMessage = await httpClient.PostAsJsonAsync("/authorize", payload);
     }
     catch (Exception ex)
     {
@@ -186,13 +198,16 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
 
     if (!responseMessage.IsSuccessStatusCode)
     {
-        if (responseMessage.StatusCode is HttpStatusCode.Unauthorized)
+        if (responseMessage.StatusCode is HttpStatusCode.Forbidden)
         {
             await modalInteraction.SendFollowupMessageAsync(authConfig.AuthorizationFailureInvalidCodeMessage);
             return;
         }
 
-        logger.LogError("Authorization request failed with status code {}", responseMessage.StatusCode);
+        if (responseMessage.StatusCode is HttpStatusCode.Unauthorized)
+            logger.LogError("Authorization request failed with status code {}. Make sure the secret is correct", responseMessage.StatusCode);
+        else
+            logger.LogError("Authorization request failed with status code {}", responseMessage.StatusCode);
 
         await modalInteraction.SendFollowupMessageAsync(authConfig.AuthorizationFailureMessage);
         return;
@@ -259,6 +274,20 @@ app.AddComponentInteraction("authorize-submit", async (IOptions<Config> options,
 
 app.UseGatewayHandlers();
 
+app.Use((context, next) =>
+{
+    if (context.Request.Headers.TryGetValue(HeaderNames.Authorization, out var authHeaders))
+    {
+        var options = context.RequestServices.GetRequiredService<IOptions<Config>>();
+        var connectionConfig = options.Value.Connection;
+        if (authHeaders[0] == connectionConfig.Secret)
+            return next();
+    }
+
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    return Task.CompletedTask;
+});
+
 app.MapPost("/message", async (StorageContext storageContext,
                                IWebhookProvider webhookProvider,
                                GatewayClient client,
@@ -305,7 +334,7 @@ app.MapPost("/message", async (StorageContext storageContext,
                 {
                     guildUser = await client.Rest.GetGuildUserAsync(guildId, userId);
                 }
-                catch (RestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.NotFound)
+                catch (RestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
                 {
                     storageContext.Users.Remove(savedUser);
 
