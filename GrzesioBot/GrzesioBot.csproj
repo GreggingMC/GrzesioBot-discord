@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="appsettings.example.pl.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
+    <PackageReference Include="NetCord" Version="1.0.0-alpha.390" />
+    <PackageReference Include="NetCord.Hosting" Version="1.0.0-alpha.390" />
+    <PackageReference Include="NetCord.Hosting.AspNetCore" Version="1.0.0-alpha.390" />
+    <PackageReference Include="NetCord.Services" Version="1.0.0-alpha.390" />
+    <PackageReference Include="NetCord.Hosting.Services" Version="1.0.0-alpha.390" />
+  </ItemGroup>
+
+</Project>

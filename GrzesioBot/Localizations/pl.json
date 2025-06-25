@@ -1,0 +1,8 @@
+﻿{
+  "commands": {
+    "create-authorize-message": {
+      "name": "utwórz-wiadomość-autoryzującą",
+      "description": "Utwórz wiadomość z przyciskiem autoryzacji"
+    }
+  }
+}
